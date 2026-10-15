@@ -102,12 +102,12 @@ func (z *ZTE) GetCmds(cmds []string) (map[string]string, error) {
 	if err := json.Unmarshal(data, &raw); err != nil {
 		s := strings.TrimSpace(string(data))
 		if s == "" {
-			return nil, fmt.Errorf("设备返回空响应（未登录或会话失效）")
+			return nil, fmt.Errorf("empty response from device (not logged in or session expired)")
 		}
 		if len(s) > 200 {
 			s = s[:200]
 		}
-		return nil, fmt.Errorf("无法解析设备响应: %s", s)
+		return nil, fmt.Errorf("cannot parse device response: %s", s)
 	}
 
 	out := make(map[string]string, len(raw))
@@ -140,7 +140,7 @@ func (z *ZTE) SetCmd(fields map[string]string) (map[string]string, error) {
 	}
 	var raw map[string]interface{}
 	if err := json.Unmarshal(data, &raw); err != nil {
-		return nil, fmt.Errorf("无法解析设备响应: %.200s", string(data))
+		return nil, fmt.Errorf("cannot parse device response: %.200s", string(data))
 	}
 	out := make(map[string]string, len(raw))
 	for k, v := range raw {
@@ -167,7 +167,7 @@ func (z *ZTE) accessID() (string, error) {
 		return "", err
 	}
 	if rd["RD"] == "" {
-		return "", fmt.Errorf("取不到 RD 校验值")
+		return "", fmt.Errorf("cannot read RD challenge value")
 	}
 
 	z.ad = sha256Hex(sha256Hex(m["wa_inner_version"]+m["cr_version"]) + rd["RD"])
@@ -182,7 +182,7 @@ func (z *ZTE) Login() error {
 	}
 	ld := m["LD"]
 	if ld == "" {
-		return fmt.Errorf("取不到 LD 挑战值（请确认设备地址与网络可达）")
+		return fmt.Errorf("cannot read LD challenge (check the device address and network reachability)")
 	}
 
 	pwdField := sha256Hex(sha256Hex(z.passwd) + ld)
@@ -195,15 +195,15 @@ func (z *ZTE) Login() error {
 	case "0", "4", "success", "":
 		return nil
 	case "3":
-		return fmt.Errorf("登录失败：密码错误")
+		return fmt.Errorf("login failed: wrong password")
 	case "2":
-		return fmt.Errorf("登录失败：已有其他客户端登录（duplicateUser）")
+		return fmt.Errorf("login failed: another client is already logged in (duplicateUser)")
 	case "1":
-		return fmt.Errorf("登录失败：Login Fail")
+		return fmt.Errorf("login failed")
 	case "5":
-		return fmt.Errorf("登录失败：设备当前不可用（LCD 报错码）")
+		return fmt.Errorf("login failed: device currently unavailable")
 	default:
-		return fmt.Errorf("登录失败：未知返回 result=%s", r)
+		return fmt.Errorf("login failed: unexpected result=%s", r)
 	}
 }
 

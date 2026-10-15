@@ -1,9 +1,18 @@
 #
-# luci-app-ztewifi —— ZTE 随身WiFi 状态与设置（LuCI 应用 + Go 后端）
+# luci-app-ztewifi - ZTE portable WiFi status and settings
 #
-# 说明: 本 Makefile 供 OpenWrt/ImmortalWrt buildroot 集成使用。
-#       产物包含 /usr/bin/ztewifi（Go 交叉编译）与 LuCI 菜单/ACL/视图文件。
-#       本地免 buildroot 的安装方式见 install.sh 与 deploy.ps1。
+# The LuCI part (htdocs/, root/, po/) is handled entirely by luci.mk, which
+# also generates the luci-i18n-ztewifi-<lang> translation packages from po/.
+#
+# The Go backend in ./src is built through the standard "src/Makefile" hook.
+# When src/Makefile is present luci.mk runs
+#     make -C $(PKG_BUILD_DIR)/src clean compile
+#     make -C $(PKG_BUILD_DIR)/src DESTDIR=$(PKG_INSTALL_DIR) install
+# and installs everything under $(PKG_INSTALL_DIR).
+#
+# Because src/Makefile exists, luci.mk leaves LUCI_PKGARCH empty, so this
+# package is architecture specific (it ships a compiled Go binary) - which
+# is what we want.
 #
 include $(TOPDIR)/rules.mk
 
@@ -14,77 +23,24 @@ PKG_RELEASE:=1
 PKG_LICENSE:=MIT
 PKG_MAINTAINER:=
 
-PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
 PKG_BUILD_DEPENDS:=golang/host
 PKG_BUILD_PARALLEL:=1
 
 GO_PKG:=ztewifi
-GO_PKG_BUILD_PKG:=ztewifi
-GO_PKG_LDFLAGS:=-s -w
-GO_PKG_LDFLAGS_X:=
 
-include $(INCLUDE_DIR)/package.mk
+LUCI_TITLE:=ZTE portable WiFi status and settings
+LUCI_DESCRIPTION:=Show signal, network and device information of a ZTE portable WiFi \
+ (RedCap hotspot, e.g. MU3650 / F40) on the LuCI overview page, plus a settings page \
+ for the device address, login password and its WiFi switch. \
+ The backend is a dependency-free Go binary talking to the device's built-in web API.
+LUCI_DEPENDS:=+luci-base +rpcd
+
 include $(TOPDIR)/feeds/packages/lang/golang/golang-package.mk
 
-define Package/luci-app-ztewifi
-  SECTION:=luci
-  CATEGORY:=LuCI
-  SUBMENU:=3. Applications
-  TITLE:=ZTE portable WiFi (随身WiFi) status & settings
-  DEPENDS:=$(GO_ARCH_DEPENDS) +luci-base +rpcd
-  PKGARCH:=$(GO_ARCH)
-endef
+# Cross compilation settings, passed down to src/Makefile.
+# (golang-values.mk unexports GOOS/GOARCH, so they must be forwarded explicitly.)
+MAKE_VARS += \
+	GO_OS="$(GO_OS)" \
+	GO_ARCH="$(GO_ARCH)"
 
-define Package/luci-app-ztewifi/description
-  LuCI app for ZTE portable WiFi hotspots (RedCap Mobile Hotspot,
-  model MU3650 / market name F40 and compatible firmware).
-
-  - Adds a "ZTE 随身WiFi" panel to Status -> Overview showing signal bars,
-    RSRP/RSRQ/SINR, radio band, carrier, WAN IP, device model and battery.
-  - Adds a settings page to configure the device IP and admin password.
-  - Backend is a small Go binary talking to the device's built-in
-    /goform/goform_get_cmd_process web API (no external dependencies).
-endef
-
-define Build/Prepare
-	mkdir -p $(PKG_BUILD_DIR)
-	$(CP) ./src/. $(PKG_BUILD_DIR)/
-endef
-
-define Build/Compile
-	$(call GoPackage/Build/Compile)
-endef
-
-define Package/luci-app-ztewifi/install
-	$(call GoPackage/Package/Install/Bin,$(PKG_INSTALL_DIR))
-
-	$(INSTALL_DIR) $(1)/etc/config
-	$(INSTALL_CONF) ./root/etc/config/ztewifi $(1)/etc/config/ztewifi
-
-	$(INSTALL_DIR) $(1)/usr/share/luci/menu.d
-	$(INSTALL_DATA) ./root/usr/share/luci/menu.d/*.json $(1)/usr/share/luci/menu.d/
-
-	$(INSTALL_DIR) $(1)/usr/share/rpcd/acl.d
-	$(INSTALL_DATA) ./root/usr/share/rpcd/acl.d/*.json $(1)/usr/share/rpcd/acl.d/
-
-	$(INSTALL_DIR) $(1)/www/luci-static/resources/view/ztewifi
-	$(INSTALL_DATA) ./root/www/luci-static/resources/view/ztewifi/*.js $(1)/www/luci-static/resources/view/ztewifi/
-
-	$(INSTALL_DIR) $(1)/www/luci-static/resources/view/status/include
-	$(INSTALL_DATA) ./root/www/luci-static/resources/view/status/include/*.js $(1)/www/luci-static/resources/view/status/include/
-endef
-
-define Package/luci-app-ztewifi/conffiles
-/etc/config/ztewifi
-endef
-
-define Package/luci-app-ztewifi/postinst
-#!/bin/sh
-[ -n "$${IPKG_INSTROOT}" ] || {
-	/etc/init.d/rpcd restart >/dev/null 2>&1
-	rm -f /tmp/luci-indexcache* 2>/dev/null
-}
-exit 0
-endef
-
-$(eval $(call BuildPackage,luci-app-ztewifi))
+include $(TOPDIR)/feeds/luci/luci.mk

@@ -3,7 +3,8 @@
 #
 # 目录布局:
 #   ztewifi            -> /usr/bin/ztewifi
-#   root/              -> 直接铺到 / (usr/, www/)
+#   root/              -> 直接铺到 /  (etc/, usr/，含 usr/lib/lua/luci/i18n/*.lmo)
+#   htdocs/            -> /www/
 #   root/etc/config/ztewifi 仅在不存在时安装
 #
 # 用法:  sh install.sh
@@ -28,16 +29,18 @@ chmod 0755 /usr/bin/ztewifi
 
 echo "==> 安装 LuCI 文件"
 mkdir -p /usr/share/luci/menu.d /usr/share/rpcd/acl.d \
+         /usr/lib/lua/luci/i18n \
          /www/luci-static/resources/view/ztewifi \
          /www/luci-static/resources/view/status/include
 cp -a "$DIR/root/usr/." /usr/
-cp -a "$DIR/root/www/." /www/
+cp -a "$DIR/htdocs/." /www/
 # 清理旧版本文件名（早期版本叫 75_ztewifi.js）
 rm -f /www/luci-static/resources/view/status/include/75_ztewifi.js
 chmod 0644 /usr/share/luci/menu.d/luci-app-ztewifi.json \
            /usr/share/rpcd/acl.d/luci-app-ztewifi.json \
            /www/luci-static/resources/view/ztewifi/*.js \
            /www/luci-static/resources/view/status/include/29z_ztewifi.js
+chmod 0644 /usr/lib/lua/luci/i18n/*.lmo 2>/dev/null || true
 
 echo "==> 初始化 /etc/config/ztewifi"
 [ -f /etc/config/ztewifi ] || cp "$DIR/root/etc/config/ztewifi" /etc/config/ztewifi

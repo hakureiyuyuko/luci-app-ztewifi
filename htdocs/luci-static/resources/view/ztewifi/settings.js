@@ -26,47 +26,48 @@ return view.extend({
 
 		var stateHtml = function (on) {
 			return on
-				? '<b style="color:#1a7f37">' + _('已开启') + '</b>'
-				: '<b style="color:#c0392b">' + _('已关闭') + '</b>';
+				? '<b style="color:#1a7f37">' + _('On') + '</b>'
+				: '<b style="color:#c0392b">' + _('Off') + '</b>';
 		};
 
-		m = new form.Map('ztewifi', _('ZTE 随身WiFi 设置'),
-			_('配置随身 WiFi 后台的管理地址与登录密码。插件通过设备自带网页接口读取信号与网络信息，不会修改设备本身。'));
+		m = new form.Map('ztewifi', _('ZTE Portable WiFi Settings'),
+			_('Configure the web UI address and login password of the portable WiFi. The app only reads status information through the built-in web API.') + '<br />' +
+			_('The router itself is not modified.'));
 
-		s = m.section(form.NamedSection, 'main', 'ztewifi', _('基本设置'));
+		s = m.section(form.NamedSection, 'main', 'ztewifi', _('General Settings'));
 		s.anonymous = true;
 
-		o = s.option(form.Flag, 'enabled', _('启用'));
+		o = s.option(form.Flag, 'enabled', _('Enable'));
 		o.default = '1';
 		o.rmempty = false;
-		o.description = _('关闭后，首页面板与状态页将不再采集数据。');
+		o.description = _('When disabled, the overview panel and the status page stop collecting data.');
 
-		o = s.option(form.Value, 'ip', _('设备 IP 地址'));
+		o = s.option(form.Value, 'ip', _('Device IP address'));
 		o.datatype = 'ip4addr';
 		o.default = '192.168.0.1';
 		o.placeholder = '192.168.0.1';
 		o.rmempty = false;
-		o.description = _('随身 WiFi 管理后台地址，通常为 192.168.0.1。');
+		o.description = _('Web UI address of the portable WiFi, usually 192.168.0.1.');
 
-		o = s.option(form.Value, 'password', _('登录密码'));
+		o = s.option(form.Value, 'password', _('Login password'));
 		o.password = true;
 		o.rmempty = false;
-		o.description = _('随身 WiFi 网页后台的登录密码（明文保存在本机 /etc/config/ztewifi）。');
+		o.description = _('Login password of the portable WiFi web UI (stored in plain text in /etc/config/ztewifi).');
 
-		o = s.option(form.Value, 'interval', _('状态页刷新间隔'));
+		o = s.option(form.Value, 'interval', _('Status refresh interval'));
 		o.datatype = 'uinteger';
 		o.default = '5';
 		o.rmempty = false;
-		o.description = _('单位：秒。');
+		o.description = _('Unit: seconds.');
 
-		o = s.option(form.Value, 'timeout', _('请求超时'));
+		o = s.option(form.Value, 'timeout', _('Request timeout'));
 		o.datatype = 'uinteger';
 		o.default = '8';
 		o.optional = true;
-		o.description = _('单位：秒。网络较慢时可调大。');
+		o.description = _('Unit: seconds. Increase it on slow networks.');
 
-		o = s.option(form.Button, '_test', _('连接测试'));
-		o.inputtitle = _('保存并测试连接');
+		o = s.option(form.Button, '_test', _('Connection test'));
+		o.inputtitle = _('Save and test connection');
 		o.inputstyle = 'apply';
 		o.onclick = function (ev, section_id) {
 			var map = this.map;
@@ -77,40 +78,40 @@ return view.extend({
 				try { out = JSON.parse((res.stdout || '').trim()); } catch (e) {}
 				if (out.ok)
 					ui.addNotification(null, E('p', {}, [
-						_('连接成功') + '：' + (out.message || '') + '  (' + (out.elapsed || '-') + ')'
+						_('Connected') + ': ' + (out.message || '') + '  (' + (out.elapsed || '-') + ')'
 					]), 'info');
 				else
 					ui.addNotification(null, E('p', {}, [
-						_('连接失败') + '：' + (out.message || (res.stderr || '').trim() || _('未知错误'))
+						_('Connection failed') + ': ' + (out.message || (res.stderr || '').trim() || _('Unknown error'))
 					]), 'error');
 			}).catch(function (e) {
 				ui.addNotification(null, E('p', {}, [
-					_('测试失败') + '：' + ((e && e.message) ? e.message : e)
+					_('Test failed') + ': ' + ((e && e.message) ? e.message : e)
 				]), 'error');
 			});
 		};
 
-		/* ---- 设备控制：直接操作随身 WiFi 自身，不写入 UCI ---- */
+		/* ---- Device control: acts on the portable WiFi directly, no UCI ---- */
 		var btnClass = function (on) {
 			return 'cbi-button cbi-button-' + (on ? 'reset important' : 'apply important');
 		};
 
-		var s2 = m.section(form.NamedSection, 'main', 'ztewifi', _('设备控制'));
+		var s2 = m.section(form.NamedSection, 'main', 'ztewifi', _('Device Control'));
 		s2.anonymous = true;
-		s2.description = _('直接控制随身 WiFi 自身的无线开关，不修改路由器配置，也不需要点“保存并应用”。');
+		s2.description = _('Toggle the wireless radio of the portable WiFi itself. This does not change any router configuration and does not require "Save & Apply".');
 
-		o = s2.option(form.DummyValue, '_wifi_state', _('设备 WiFi'));
+		o = s2.option(form.DummyValue, '_wifi_state', _('Device WiFi'));
 		o.rawhtml = true;
 		o.cfgvalue = function () {
 			if (!wifiKnown)
-				return '<em>' + _('读取失败') + (wifi.message ? '：' + wifi.message : '') + '</em>';
+				return '<em>' + _('Read failed') + (wifi.message ? ': ' + wifi.message : '') + '</em>';
 			return '<span id="ztewifi-wifi-state">' + stateHtml(wifiOn) + '</span>';
 		};
 
-		o = s2.option(form.Button, '_wifi_toggle', _('WiFi 开关'));
-		o.inputtitle = wifiOn ? _('关闭') : _('开启');
+		o = s2.option(form.Button, '_wifi_toggle', _('WiFi switch'));
+		o.inputtitle = wifiOn ? _('Turn off') : _('Turn on');
 		o.inputstyle = wifiOn ? 'reset important' : 'apply important';
-		o.description = _('对应随身 WiFi 后台里的无线开关。设备切换需要几秒钟。');
+		o.description = _('Same switch as the one in the portable WiFi web UI. The device needs a few seconds to apply it.');
 		o.onclick = function (ev, section_id) {
 			var btn = ev.currentTarget;
 			var target = wifiOn ? 'off' : 'on';
@@ -120,18 +121,18 @@ return view.extend({
 				var out = {};
 				try { out = JSON.parse((res.stdout || '').trim()); } catch (e) {}
 				if (!out.ok)
-					throw new Error(out.message || (res.stderr || '').trim() || _('未知错误'));
+					throw new Error(out.message || (res.stderr || '').trim() || _('Unknown error'));
 
 				wifiOn = out.on === true;
 				var el = document.getElementById('ztewifi-wifi-state');
 				if (el) el.innerHTML = stateHtml(wifiOn);
-				btn.firstChild.data = wifiOn ? _('关闭') : _('开启');
+				btn.firstChild.data = wifiOn ? _('Turn off') : _('Turn on');
 				btn.setAttribute('class', btnClass(wifiOn));
 
-				ui.addNotification(null, E('p', {}, [ out.message || _('操作成功') ]), 'info');
+				ui.addNotification(null, E('p', {}, [ out.message || _('Done') ]), 'info');
 			}).catch(function (e) {
 				ui.addNotification(null, E('p', {}, [
-					_('操作失败') + '：' + ((e && e.message) ? e.message : e)
+					_('Operation failed') + ': ' + ((e && e.message) ? e.message : e)
 				]), 'error');
 			}).finally(function () {
 				btn.disabled = false;

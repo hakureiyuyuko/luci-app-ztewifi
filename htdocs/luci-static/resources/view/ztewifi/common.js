@@ -3,13 +3,16 @@
 'require fs';
 
 /*
- * 共用工具模块。
- * 注意：LuCI 会对模块返回的类执行 `new`（loader: `const instance = new _class()`），
- * 并把实例交给调用方，所以这里必须 return baseclass.extend({...})，
- * 而不是普通对象字面量，否则会报 "factory yields invalid constructor"。
+ * Shared helpers.
+ *
+ * NOTE: LuCI instantiates the class a module returns
+ * (loader does `const instance = new _class()`), so a module must
+ * `return baseclass.extend({...})` rather than a plain object literal,
+ * otherwise it fails with "factory yields invalid constructor".
  */
 
-/* 调用 /usr/bin/ztewifi 并解析 JSON；异常统一归一化为 {ok:false, error:"..."} */
+/* Run /usr/bin/ztewifi and parse its JSON output. All failures are
+ * normalised to {ok: false, error: "..."} so views can handle one shape. */
 function callStatus() {
 	return fs.exec('/usr/bin/ztewifi', [ 'status' ]).then(function (res) {
 		var out = (res.stdout || '').trim();
@@ -19,26 +22,26 @@ function callStatus() {
 		catch (e) {
 			return {
 				ok: false,
-				error: out ? out.slice(0, 300) : ((res.stderr || '').trim() || _('设备无输出'))
+				error: out ? out.slice(0, 300) : ((res.stderr || '').trim() || _('No output from device'))
 			};
 		}
 	}).catch(function (e) {
 		var msg = (e && e.message) ? e.message : String(e);
 		if (/PermissionError/.test(msg))
-			msg += '（' + _('缺少 file.exec 权限，请以管理员账号登录') + '）';
+			msg += ' (' + _('missing file.exec permission, please log in as an administrator') + ')';
 		return { ok: false, error: msg };
 	});
 }
 
-/* 数值展示：0 / 空 视为无效 */
+/* Print a value, treating 0 / empty as "no data". */
 function fmt(v, unit) {
 	if (v === undefined || v === null || v === '' || v === 0)
 		return '-';
 	return v + (unit || '');
 }
 
-/* RSRP(dBm) -> 质量百分比；约 -115dBm=0% ，-80dBm=100%。
- * 没有 RSRP 时退回设备上报的信号格(0-5)。 */
+/* RSRP (dBm) to a 0..100 quality percentage; falls back to the
+ * bar count reported by the device when RSRP is unavailable. */
 function rsrpPercent(rsrp, bars) {
 	var r = parseInt(rsrp);
 	if (!r)
@@ -46,7 +49,7 @@ function rsrpPercent(rsrp, bars) {
 	return Math.max(0, Math.min(100, Math.round((r + 115) * 100 / 35)));
 }
 
-/* 选用 OpenWrt 原生信号图标（与 60_wifi.js 完全一致的阈值） */
+/* Pick the stock OpenWrt signal icon (same thresholds as 60_wifi.js). */
 function signalIcon(pct) {
 	var name = (pct <= 0) ? 'signal-000-000'
 		: (pct < 25) ? 'signal-000-025'
@@ -56,18 +59,30 @@ function signalIcon(pct) {
 	return L.resource('icons/' + name + '.svg');
 }
 
+/* Human readable name for the level code emitted by the backend. */
+function levelName(code) {
+	switch (code) {
+		case 'excellent': return _('Excellent');
+		case 'good':      return _('Good');
+		case 'fair':      return _('Fair');
+		case 'weak':      return _('Weak');
+		case 'poor':      return _('Poor');
+		default:          return code || '';
+	}
+}
+
 /* ---------------------------------------------------------------
- * 以下三个 helper 复刻 LuCI 首页模板 admin_status/index.ut 注入的
- * renderBox() / renderBadge() / L.itemlist()，用来做出与官方「无线」
- * 区块一模一样的 ifacebox 排版。
- * 若页面上已经有原生实现就直接用，避免将来样式漂移。
+ * The three helpers below re-create what the LuCI overview template
+ * admin_status/index.ut injects globally (renderBox / renderBadge /
+ * L.itemlist), so the panel looks exactly like the stock "Wireless"
+ * section. The native implementations are preferred when present.
  * ------------------------------------------------------------- */
 
 function itemlist(pairs) {
 	if (typeof L.itemlist === 'function')
 		return L.itemlist(E('span'), pairs);
 
-	/* 等价回退：每项一行，形如 <strong>标签: </strong>值，用 <br> 分隔 */
+	/* Equivalent fallback: one "Label: value" per line, <br> separated */
 	var children = [];
 	for (var i = 0; i < pairs.length; i += 2) {
 		if (pairs[i + 1] === null || pairs[i + 1] === undefined)
@@ -82,7 +97,7 @@ function itemlist(pairs) {
 	return E('span', {}, children);
 }
 
-/* 紧凑信号徽章：图标在上、一行文字在下（适合表格单元格，需配合 .ifacebadge 默认列布局） */
+/* Compact signal badge: icon on top, one line of text below. */
 function badge(icon, text, title) {
 	return E('span', { 'class': 'ifacebadge', 'title': title || text }, [
 		E('img', { 'src': icon }),
@@ -90,8 +105,8 @@ function badge(icon, text, title) {
 	]);
 }
 
-/* 宽体信号徽章：图标在左、右侧多行「标签: 值」。
- * 需要放在 .network-status-table 内才会变宽（与原生 renderBadge 一致）。 */
+/* Wide signal badge: icon on the left, multiple "Label: value" lines
+ * on the right. Only stretches inside a .network-status-table container. */
 function badgeWide(icon, title, pairs) {
 	if (typeof renderBadge === 'function')
 		return renderBadge.apply(null, [ icon, title ].concat(pairs));
@@ -102,7 +117,7 @@ function badgeWide(icon, title, pairs) {
 	]);
 }
 
-/* ifacebox：带标题条的信息卡片 */
+/* ifacebox: informational card with a coloured title bar. */
 function ifaceBox(title, active, children, pairs) {
 	if (typeof renderBox === 'function')
 		return renderBox.apply(null, [ title, active, children ].concat(pairs));
@@ -117,7 +132,7 @@ function ifaceBox(title, active, children, pairs) {
 	]);
 }
 
-/* 统一的“标签 - 值”表格行（应用内状态页用） */
+/* Plain "label - value" table row (used by the app status page). */
 function row(label, value) {
 	return E('tr', { 'class': 'tr' }, [
 		E('td', { 'class': 'td left', 'width': '34%' }, [ label ]),
@@ -132,6 +147,7 @@ return baseclass.extend({
 	fmt: fmt,
 	rsrpPercent: rsrpPercent,
 	signalIcon: signalIcon,
+	levelName: levelName,
 	badge: badge,
 	badgeWide: badgeWide,
 	ifaceBox: ifaceBox,

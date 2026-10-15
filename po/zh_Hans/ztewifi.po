@@ -1,0 +1,301 @@
+msgid ""
+msgstr ""
+"Language: zh_Hans\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"Project-Id-Version: luci-app-ztewifi\n"
+"Report-Msgid-Bugs-To: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: htdocs/luci-static/resources/view/status/include/29z_ztewifi.js:53
+#: htdocs/luci-static/resources/view/ztewifi/status.js:73
+msgid "(charging)"
+msgstr "（充电中）"
+
+#: htdocs/luci-static/resources/view/ztewifi/status.js:107
+msgid "Auto refresh every %d seconds; configurable on the Settings page."
+msgstr "每 %d 秒自动刷新；可在“设置”页修改刷新间隔。"
+
+#: htdocs/luci-static/resources/view/status/include/29z_ztewifi.js:53
+#: htdocs/luci-static/resources/view/ztewifi/status.js:72
+msgid "Battery"
+msgstr "电池"
+
+#: htdocs/luci-static/resources/view/status/include/29z_ztewifi.js:47
+#: htdocs/luci-static/resources/view/ztewifi/status.js:31
+msgid "Cell ID"
+msgstr "小区 ID"
+
+#: htdocs/luci-static/resources/view/status/include/29z_ztewifi.js:46
+#: htdocs/luci-static/resources/view/ztewifi/status.js:30
+msgid "Channel"
+msgstr "信道"
+
+#: htdocs/luci-static/resources/view/ztewifi/status.js:16
+msgid "Check the device IP and password on the Settings page, and make sure the router can reach the portable WiFi."
+msgstr "请检查“设置”页中的设备 IP 与登录密码是否正确，并确认路由器能访问到随身 WiFi。"
+
+#: htdocs/luci-static/resources/view/ztewifi/status.js:80
+msgid "Collected from %s, device time %s"
+msgstr "采集自 %s，设备时间 %s"
+
+#: htdocs/luci-static/resources/view/ztewifi/settings.js:34
+msgid "Configure the web UI address and login password of the portable WiFi. The app only reads status information through the built-in web API."
+msgstr "配置随身 WiFi 后台的管理地址与登录密码。插件通过设备自带网页接口读取状态信息。"
+
+#: htdocs/luci-static/resources/view/ztewifi/settings.js:81
+msgid "Connected"
+msgstr "连接成功"
+
+#: htdocs/luci-static/resources/view/status/include/29z_ztewifi.js:51
+msgid "Connection"
+msgstr "连接状态"
+
+#: htdocs/luci-static/resources/view/ztewifi/settings.js:85
+msgid "Connection failed"
+msgstr "连接失败"
+
+#: htdocs/luci-static/resources/view/ztewifi/settings.js:69
+msgid "Connection test"
+msgstr "连接测试"
+
+#: htdocs/luci-static/resources/view/ztewifi/status.js:78
+msgid "Device"
+msgstr "设备"
+
+#: htdocs/luci-static/resources/view/ztewifi/settings.js:99
+msgid "Device Control"
+msgstr "设备控制"
+
+#: htdocs/luci-static/resources/view/ztewifi/settings.js:45
+msgid "Device IP address"
+msgstr "设备 IP 地址"
+
+#: htdocs/luci-static/resources/view/ztewifi/settings.js:103
+msgid "Device WiFi"
+msgstr "设备 WiFi"
+
+#: htdocs/luci-static/resources/view/ztewifi/status.js:58
+msgid "Dial status"
+msgstr "拨号状态"
+
+#: htdocs/luci-static/resources/view/ztewifi/settings.js:132
+msgid "Done"
+msgstr "操作成功"
+
+#: htdocs/luci-static/resources/view/ztewifi/settings.js:40
+msgid "Enable"
+msgstr "启用"
+
+#: htdocs/luci-static/resources/view/ztewifi/common.js:65
+msgid "Excellent"
+msgstr "极佳"
+
+#: htdocs/luci-static/resources/view/ztewifi/common.js:67
+msgid "Fair"
+msgstr "一般"
+
+#: htdocs/luci-static/resources/view/status/include/29z_ztewifi.js:52
+#: htdocs/luci-static/resources/view/ztewifi/status.js:65
+msgid "Firmware"
+msgstr "固件"
+
+#: htdocs/luci-static/resources/view/ztewifi/settings.js:37
+msgid "General Settings"
+msgstr "基本设置"
+
+#: htdocs/luci-static/resources/view/ztewifi/common.js:66
+msgid "Good"
+msgstr "良好"
+
+#: htdocs/luci-static/resources/view/ztewifi/settings.js:52
+msgid "Login password"
+msgstr "登录密码"
+
+#: htdocs/luci-static/resources/view/ztewifi/settings.js:55
+msgid "Login password of the portable WiFi web UI (stored in plain text in /etc/config/ztewifi)."
+msgstr "随身 WiFi 网页后台的登录密码（明文保存在本机 /etc/config/ztewifi）。"
+
+#: htdocs/luci-static/resources/view/ztewifi/status.js:63
+msgid "Model"
+msgstr "机型"
+
+#: htdocs/luci-static/resources/view/ztewifi/status.js:77
+msgid "Network"
+msgstr "网络"
+
+#: htdocs/luci-static/resources/view/status/include/29z_ztewifi.js:44
+#: htdocs/luci-static/resources/view/ztewifi/status.js:28
+msgid "Network type"
+msgstr "网络制式"
+
+#: htdocs/luci-static/resources/view/ztewifi/common.js:25
+msgid "No output from device"
+msgstr "设备无输出"
+
+#: htdocs/luci-static/resources/view/ztewifi/settings.js:30
+#: htdocs/luci-static/resources/view/ztewifi/status.js:71
+msgid "Off"
+msgstr "已关闭"
+
+#: htdocs/luci-static/resources/view/ztewifi/settings.js:29
+#: htdocs/luci-static/resources/view/ztewifi/status.js:71
+msgid "On"
+msgstr "已开启"
+
+#: htdocs/luci-static/resources/view/status/include/29z_ztewifi.js:32
+msgid "Open settings"
+msgstr "前往设置"
+
+#: htdocs/luci-static/resources/view/ztewifi/settings.js:135
+msgid "Operation failed"
+msgstr "操作失败"
+
+#: htdocs/luci-static/resources/view/status/include/29z_ztewifi.js:48
+#: htdocs/luci-static/resources/view/ztewifi/status.js:55
+msgid "Operator"
+msgstr "运营商"
+
+#: htdocs/luci-static/resources/view/ztewifi/common.js:69
+msgid "Poor"
+msgstr "很弱"
+
+#: htdocs/luci-static/resources/view/status/include/29z_ztewifi.js:57
+#: htdocs/luci-static/resources/view/status/include/29z_ztewifi.js:62
+#: htdocs/luci-static/resources/view/ztewifi/status.js:39
+msgid "Quality"
+msgstr "质量"
+
+#: htdocs/luci-static/resources/view/status/include/29z_ztewifi.js:45
+#: htdocs/luci-static/resources/view/ztewifi/status.js:29
+msgid "Radio band"
+msgstr "频段"
+
+#: htdocs/luci-static/resources/view/status/include/29z_ztewifi.js:63
+#: htdocs/luci-static/resources/view/ztewifi/status.js:52
+msgid "Rate"
+msgstr "实时速率"
+
+#: htdocs/luci-static/resources/view/status/include/29z_ztewifi.js:29
+#: htdocs/luci-static/resources/view/ztewifi/settings.js:107
+#: htdocs/luci-static/resources/view/ztewifi/status.js:13
+msgid "Read failed"
+msgstr "读取失败"
+
+#: htdocs/luci-static/resources/view/ztewifi/status.js:115
+msgid "Refresh now"
+msgstr "立即刷新"
+
+#: htdocs/luci-static/resources/view/ztewifi/settings.js:63
+msgid "Request timeout"
+msgstr "请求超时"
+
+#: htdocs/luci-static/resources/view/ztewifi/status.js:57
+msgid "Roaming"
+msgstr "漫游"
+
+#: htdocs/luci-static/resources/view/ztewifi/settings.js:114
+msgid "Same switch as the one in the portable WiFi web UI. The device needs a few seconds to apply it."
+msgstr "对应随身 WiFi 后台里的无线开关。设备切换需要几秒钟。"
+
+#: htdocs/luci-static/resources/view/ztewifi/settings.js:70
+msgid "Save and test connection"
+msgstr "保存并测试连接"
+
+#: root/usr/share/luci/menu.d/luci-app-ztewifi.json:24
+msgid "Settings"
+msgstr "设置"
+
+#: htdocs/luci-static/resources/view/status/include/29z_ztewifi.js:57
+#: htdocs/luci-static/resources/view/ztewifi/status.js:38
+#: htdocs/luci-static/resources/view/ztewifi/status.js:76
+msgid "Signal"
+msgstr "信号"
+
+#: htdocs/luci-static/resources/view/ztewifi/status.js:33
+msgid "Signal strength"
+msgstr "信号强度"
+
+#: root/usr/share/luci/menu.d/luci-app-ztewifi.json:15
+msgid "Status"
+msgstr "状态"
+
+#: htdocs/luci-static/resources/view/ztewifi/settings.js:57
+msgid "Status refresh interval"
+msgstr "状态页刷新间隔"
+
+#: htdocs/luci-static/resources/view/ztewifi/settings.js:89
+msgid "Test failed"
+msgstr "测试失败"
+
+#: htdocs/luci-static/resources/view/ztewifi/settings.js:35
+msgid "The router itself is not modified."
+msgstr "不会修改路由器本身的配置。"
+
+#: htdocs/luci-static/resources/view/ztewifi/settings.js:101
+msgid "Toggle the wireless radio of the portable WiFi itself. This does not change any router configuration and does not require \"Save & Apply\"."
+msgstr "直接控制随身 WiFi 自身的无线开关，不修改路由器配置，也不需要点“保存并应用”。"
+
+#: htdocs/luci-static/resources/view/ztewifi/settings.js:112
+#: htdocs/luci-static/resources/view/ztewifi/settings.js:129
+msgid "Turn off"
+msgstr "关闭"
+
+#: htdocs/luci-static/resources/view/ztewifi/settings.js:112
+#: htdocs/luci-static/resources/view/ztewifi/settings.js:129
+msgid "Turn on"
+msgstr "开启"
+
+#: htdocs/luci-static/resources/view/ztewifi/settings.js:61
+msgid "Unit: seconds."
+msgstr "单位：秒。"
+
+#: htdocs/luci-static/resources/view/ztewifi/settings.js:67
+msgid "Unit: seconds. Increase it on slow networks."
+msgstr "单位：秒。网络较慢时可调大。"
+
+#: htdocs/luci-static/resources/view/status/include/29z_ztewifi.js:30
+#: htdocs/luci-static/resources/view/ztewifi/settings.js:124
+#: htdocs/luci-static/resources/view/ztewifi/settings.js:85
+#: htdocs/luci-static/resources/view/ztewifi/status.js:14
+msgid "Unknown error"
+msgstr "未知错误"
+
+#: htdocs/luci-static/resources/view/ztewifi/common.js:68
+msgid "Weak"
+msgstr "较弱"
+
+#: htdocs/luci-static/resources/view/ztewifi/settings.js:50
+msgid "Web UI address of the portable WiFi, usually 192.168.0.1."
+msgstr "随身 WiFi 管理后台地址，通常为 192.168.0.1。"
+
+#: htdocs/luci-static/resources/view/ztewifi/settings.js:43
+msgid "When disabled, the overview panel and the status page stop collecting data."
+msgstr "关闭后，首页面板与状态页将不再采集数据。"
+
+#: htdocs/luci-static/resources/view/ztewifi/settings.js:111
+msgid "WiFi switch"
+msgstr "WiFi 开关"
+
+#: htdocs/luci-static/resources/view/status/include/29z_ztewifi.js:20
+#: htdocs/luci-static/resources/view/status/include/29z_ztewifi.js:68
+#: root/usr/share/luci/menu.d/luci-app-ztewifi.json:3
+msgid "ZTE Portable WiFi"
+msgstr "ZTE 随身WiFi"
+
+#: htdocs/luci-static/resources/view/ztewifi/settings.js:33
+msgid "ZTE Portable WiFi Settings"
+msgstr "ZTE 随身WiFi 设置"
+
+#: htdocs/luci-static/resources/view/ztewifi/status.js:105
+msgid "ZTE Portable WiFi Status"
+msgstr "ZTE 随身WiFi 状态"
+
+#: htdocs/luci-static/resources/view/ztewifi/status.js:43
+msgid "device reports"
+msgstr "设备上报"
+
+#: htdocs/luci-static/resources/view/ztewifi/common.js:31
+msgid "missing file.exec permission, please log in as an administrator"
+msgstr "缺少 file.exec 权限，请以管理员账号登录"

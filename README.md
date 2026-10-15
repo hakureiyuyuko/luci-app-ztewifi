@@ -18,26 +18,51 @@
 
 ```
 luci-app-ztewifi/
-├── Makefile                     OpenWrt buildroot 包定义
+├── Makefile                     OpenWrt 包定义（基于 luci.mk）
 ├── build.ps1                    Windows 下交叉编译（也可直接 go build）
-├── package.ps1                  生成可分发的 tar.gz
+├── package.ps1                  生成可分发的 tar.gz（含编译好的 .lmo）
 ├── deploy.ps1                   构建 + 一键部署到测试路由器
 ├── install.sh                   在路由器本机安装（tar 包内）
-├── src/                         Go 源码（标准库，无第三方依赖）
-│   ├── go.mod
-│   ├── main.go                  CLI 入口 / 输出
-│   ├── status.go                状态聚合、会话缓存、UCI 读写
-│   ├── zte.go                   gofrom 接口客户端（登录 / 读命令）
-│   ├── config.go                UCI 配置解析
-│   └── tz.go                    OpenWrt /etc/TZ 解析（否则时间会显示成 UTC）
-└── root/                        安装到路由器的文件树
-    ├── etc/config/ztewifi
-    ├── usr/share/luci/menu.d/luci-app-ztewifi.json
-    ├── usr/share/rpcd/acl.d/luci-app-ztewifi.json
-    └── www/luci-static/resources/view/
-        ├── status/include/29z_ztewifi.js  ← 首页面板（命名见下方说明）
-        └── ztewifi/{common,status,settings}.js
+├── htdocs/                      LuCI 前端（luci.mk 会装到 /www）
+│   └── luci-static/resources/view/
+│       ├── status/include/29z_ztewifi.js  ← 首页面板（命名见下方说明）
+│       └── ztewifi/{common,status,settings}.js
+├── po/                          翻译
+│   ├── templates/ztewifi.pot
+│   └── zh_Hans/ztewifi.po       → 安装为 ztewifi.zh-cn.lmo
+├── root/                        安装到路由器的文件树
+│   ├── etc/config/ztewifi
+│   ├── usr/share/luci/menu.d/luci-app-ztewifi.json
+│   └── usr/share/rpcd/acl.d/luci-app-ztewifi.json
+└── src/                         Go 源码（标准库，无第三方依赖）
+    ├── Makefile                 供 luci.mk 调用的构建钩子
+    ├── go.mod
+    ├── main.go                  CLI 入口 / 输出
+    ├── status.go                状态聚合、会话缓存、UCI 读写、WiFi 开关
+    ├── zte.go                   gofrom 接口客户端（登录 / 读命令 / AD 校验位）
+    ├── config.go                UCI 配置解析
+    └── tz.go                    OpenWrt /etc/TZ 解析（否则时间会显示成 UTC）
 ```
+
+---
+
+## 国际化（i18n）
+
+按 OpenWrt / LuCI 的惯例组织：
+
+- 源码里的可翻译字符串一律是**英文**，并用 `_()` 包起来（`menu.d` 的 `title` 也会被服务端 `translate()`）。
+- 翻译目录放在 `po/<BCP-47>/<catalog>.po`，`luci.mk` 会用 `po2lmo` 把它们编译成
+  `/usr/lib/lua/luci/i18n/<catalog>.<luci-lang>.lmo`（`po/zh_Hans/` → `ztewifi.zh-cn.lmo`），
+  并自动生成 `luci-i18n-ztewifi-<lang>` 子包。
+- catalog 名取 `LUCI_BASENAME`（即 `ztewifi`），与 `luci-app-ddns` → `ddns.po` 的约定一致。
+- 后端（Go）不参与 LuCI i18n：它的 `message` / 错误文本用英文，信号强弱用
+  `excellent|good|fair|weak|poor` **代码**输出，由前端用 `_()` 翻译。
+
+目前提供 `zh_Hans`（简体中文）。新增语言只需在 `po/<lang>/ztewifi.po` 放一份翻译。
+
+> 小坑：LuCI 会把目录下**所有** `.lmo` 合并成一张表，`luci-base` 的词条会覆盖同名的插件词条。
+> 所以与 base 含义不同的词必须换一个源字符串（本项目就把 `Band` 改成了 `Radio band`,
+> 否则会被 base 译成“带宽”）。
 
 ---
 
@@ -66,7 +91,7 @@ uci commit ztewifi
 
 需要本机有 Go 工具链（`build.ps1` 会找 `$env:GO_ROOT`、`.build\go` 或 PATH 里的 `go`）。
 
-### 方式 C：buildroot 编译成 ipk/apk
+### 方式 C：buildroot 编译
 
 把整个目录放进 feed（如 `package/luci-app-ztewifi`），然后：
 
@@ -75,7 +100,13 @@ make menuconfig      # LuCI -> Applications -> luci-app-ztewifi
 make package/luci-app-ztewifi/compile V=s
 ```
 
-> 注：`Makefile` 使用 OpenWrt 标准的 `golang-package.mk` 约定，未在本机构建验证；
+`Makefile` 基于 `luci.mk`，会自动处理 `htdocs/`、`root/`、`po/`，并生成
+`luci-i18n-ztewifi-<lang>` 翻译子包。Go 后端通过 `src/Makefile` 钩子交叉编译：
+luci.mk 会执行 `make -C $(PKG_BUILD_DIR)/src clean compile` 与
+`... DESTDIR=$(PKG_INSTALL_DIR) install`（`GOOS`/`GOARCH` 由顶层 Makefile 传入）。
+因为存在 `src/Makefile`，本包会被构建成**架构相关**包（带 Go 二进制，这是预期的）。
+
+> 注：本项目的测试环境没有 buildroot，方式 C 的构建未经实机验证；
 > 免 buildroot 的安装请用方式 A / B。
 
 ---
@@ -93,6 +124,8 @@ LuCI 菜单：`服务 → ZTE 随身WiFi`
 首页 `状态 → 概览` 的 `ZTE 随身WiFi` 面板跟随 LuCI 的全局轮询（约 5 秒）刷新。
 
 ### 命令行
+
+> CLI 输出为英文（源码/日志统一英文），中文只出现在 LuCI 界面里（走 `po/` 翻译）。
 
 ```sh
 ztewifi status --human        # 人类可读

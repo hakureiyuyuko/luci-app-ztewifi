@@ -1,6 +1,6 @@
 {
 	"admin/services/ztewifi": {
-		"title": "ZTE 随身WiFi",
+		"title": "ZTE Portable WiFi",
 		"order": 45,
 		"action": {
 			"type": "firstchild"
@@ -12,7 +12,7 @@
 	},
 
 	"admin/services/ztewifi/status": {
-		"title": "状态",
+		"title": "Status",
 		"order": 1,
 		"action": {
 			"type": "view",
@@ -21,7 +21,7 @@
 	},
 
 	"admin/services/ztewifi/settings": {
-		"title": "设置",
+		"title": "Settings",
 		"order": 2,
 		"action": {
 			"type": "view",

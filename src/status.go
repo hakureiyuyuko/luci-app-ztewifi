@@ -116,7 +116,7 @@ func fetchStatus(cfg Config) *Status {
 		TS:   now.Unix(),
 	}
 	if !cfg.Enabled {
-		st.Error = "插件已禁用（请到“ZTE 随身WiFi → 设置”中启用）"
+		st.Error = "plugin disabled (enable it under Services -> ZTE Portable WiFi -> Settings)"
 		return st
 	}
 
@@ -132,7 +132,7 @@ func fetchStatus(cfg Config) *Status {
 		return st
 	}
 	if m["network_type"] == "" {
-		st.Error = "已登录但读不到数据（会话可能被其他客户端抢占）"
+		st.Error = "logged in but no data returned (session may have been taken over by another client)"
 		return st
 	}
 
@@ -217,15 +217,15 @@ func signalLevel(rsrp int) string {
 	case rsrp == 0:
 		return ""
 	case rsrp >= -80:
-		return "极佳"
+		return "excellent"
 	case rsrp >= -90:
-		return "良好"
+		return "good"
 	case rsrp >= -100:
-		return "一般"
+		return "fair"
 	case rsrp >= -110:
-		return "较弱"
+		return "weak"
 	default:
-		return "很弱"
+		return "poor"
 	}
 }
 
@@ -283,7 +283,7 @@ func wifiControl(cfg Config, action string) map[string]interface{} {
 	res := map[string]interface{}{"ok": false, "ip": cfg.IP, "action": action}
 
 	if !cfg.Enabled {
-		res["message"] = "插件已禁用（请到“ZTE 随身WiFi → 设置”中启用）"
+		res["message"] = "plugin disabled (enable it under Services -> ZTE Portable WiFi -> Settings)"
 		return res
 	}
 
@@ -315,13 +315,13 @@ func wifiControl(cfg Config, action string) map[string]interface{} {
 	case "off", "0", "disable", "close", "stop":
 		want = false
 	default:
-		res["message"] = "未知参数 " + action + "（可用: on / off / status）"
+		res["message"] = "unknown argument " + action + " (expected: on / off / status)"
 		return res
 	}
 
 	if on == want {
 		res["ok"] = true
-		res["message"] = "设备 WiFi 已是" + onOff(want) + "状态"
+		res["message"] = "device WiFi is already " + onOff(want)
 		return res
 	}
 
@@ -364,21 +364,22 @@ func wifiControl(cfg Config, action string) map[string]interface{} {
 		if (last == "1") == want {
 			res["ok"] = true
 			res["on"] = want
-			res["message"] = "设备 WiFi 已" + onOff(want)
+			res["message"] = "device WiFi turned " + onOff(want)
 			return res
 		}
 	}
 
 	res["on"] = last == "1"
-	res["message"] = "指令已下发，但设备状态未在超时内变为" + onOff(want) + "（当前 wifi_onoff_state=" + last + "）"
+	res["message"] = "command sent but device state did not become " + onOff(want) +
+		" within the timeout (wifi_onoff_state=" + last + ")"
 	return res
 }
 
 func onOff(on bool) string {
 	if on {
-		return "开启"
+		return "on"
 	}
-	return "关闭"
+	return "off"
 }
 
 type sessionRec struct {
@@ -457,11 +458,11 @@ func parseArgs(args []string) (map[string]string, []string) {
 func uciSet(key, val string) error {
 	if err := exec.Command("/sbin/uci", "-q", "get", "ztewifi.main").Run(); err != nil {
 		if err := exec.Command("/sbin/uci", "set", "ztewifi.main=ztewifi").Run(); err != nil {
-			return fmt.Errorf("创建 uci section 失败: %w", err)
+			return fmt.Errorf("failed to create uci section: %w", err)
 		}
 	}
 	if err := exec.Command("/sbin/uci", "set", fmt.Sprintf("ztewifi.main.%s=%s", key, val)).Run(); err != nil {
-		return fmt.Errorf("设置 %s 失败: %w", key, err)
+		return fmt.Errorf("failed to set %s: %w", key, err)
 	}
 	return nil
 }
