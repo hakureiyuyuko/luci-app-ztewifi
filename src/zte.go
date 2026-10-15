@@ -20,10 +20,11 @@ import (
 //   - 登录: GET cmd=LD 取挑战值, password = SHA256(SHA256(明文)+LD)
 //   - 会话: LOGIN 响应下发 HttpOnly Cookie zsidn, 后续请求必须回传
 type ZTE struct {
-	IP      string
-	passwd  string
-	cookie  string
-	client  *http.Client
+	IP     string
+	passwd string
+	cookie string
+	ad     string
+	client *http.Client
 }
 
 var reZSIDN = regexp.MustCompile(`(?i)\bzsidn=([0-9A-Fa-f]{8,})`)
@@ -122,6 +123,17 @@ func (z *ZTE) SetCmd(fields map[string]string) (map[string]string, error) {
 	for k, v := range fields {
 		form.Set(k, v)
 	}
+
+	// 设备前端 js/service.js 的 c()：除 LOGIN / SET_WEB_LANGUAGE 外，
+	// 所有写操作的 body 都要带 AD 校验位，否则设备静默不生效。
+	if gid := fields["goformId"]; gid != "" && gid != "LOGIN" && gid != "SET_WEB_LANGUAGE" {
+		ad, err := z.accessID()
+		if err != nil {
+			return nil, err
+		}
+		form.Set("AD", ad)
+	}
+
 	data, err := z.do("POST", "/goform/goform_set_cmd_process", form.Encode())
 	if err != nil {
 		return nil, err
@@ -135,6 +147,31 @@ func (z *ZTE) SetCmd(fields map[string]string) (map[string]string, error) {
 		out[k] = toStr(v)
 	}
 	return out, nil
+}
+
+// accessID 计算写操作所需的 AD 校验位。
+//	AD = SHA256( SHA256(rd_params0 + rd_params1) + RD )
+//	其中 rd_params0 = wa_inner_version, rd_params1 = cr_version, RD 由 cmd=RD 读取
+//	（对应设备前端 service.js 的 getLanguage() 与 util.js 的 cookWithRequest()）。
+func (z *ZTE) accessID() (string, error) {
+	if z.ad != "" {
+		return z.ad, nil
+	}
+
+	m, err := z.GetCmds([]string{"cr_version", "wa_inner_version"})
+	if err != nil {
+		return "", err
+	}
+	rd, err := z.GetCmds([]string{"RD"})
+	if err != nil {
+		return "", err
+	}
+	if rd["RD"] == "" {
+		return "", fmt.Errorf("取不到 RD 校验值")
+	}
+
+	z.ad = sha256Hex(sha256Hex(m["wa_inner_version"]+m["cr_version"]) + rd["RD"])
+	return z.ad, nil
 }
 
 // Login 完成一次登录；成功后 z.cookie 即会话凭证。
@@ -174,7 +211,6 @@ func (z *ZTE) Login() error {
 func (z *ZTE) Logout() {
 	_, _ = z.SetCmd(map[string]string{"goformId": "LOGOUT"})
 }
-
 func sha256Hex(s string) string {
 	h := sha256.Sum256([]byte(s))
 	return strings.ToUpper(hex.EncodeToString(h[:]))

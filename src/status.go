@@ -31,6 +31,7 @@ var statusCmds = []string{
 	"flux_realtime_tx_thrpt", "flux_realtime_rx_thrpt",
 	"battery_value", "battery_vol_percent", "battery_charging", "battery_exist",
 	"wifi_onoff_state", "wifi_chip1_ssid1_ssid", "wifi_chip2_ssid1_ssid",
+	"wifi_chip1_ssid1_switch_onoff", "wifi_chip2_ssid1_switch_onoff",
 	"wan_ipaddr", "lan_ipaddr",
 }
 
@@ -96,6 +97,8 @@ type BatteryInfo struct {
 type WiFiInfo struct {
 	Enabled bool   `json:"enabled"`
 	SSID    string `json:"ssid"`
+	Chip1   bool   `json:"chip1"`
+	Chip2   bool   `json:"chip2"`
 }
 
 type TrafficInfo struct {
@@ -117,24 +120,11 @@ func fetchStatus(cfg Config) *Status {
 		return st
 	}
 
-	z := NewZTE(cfg.IP, cfg.Password, cfg.Timeout)
-
-	// 1) 先尝试复用缓存会话
-	if ck := loadSession(cfg.IP); ck != "" {
-		z.cookie = ck
-		if m, err := z.GetCmds(statusCmds); err == nil && m["network_type"] != "" {
-			buildStatus(st, m)
-			st.OK = true
-			return st
-		}
-	}
-
-	// 2) 重新登录
-	if err := z.Login(); err != nil {
+	z, err := newSession(cfg)
+	if err != nil {
 		st.Error = err.Error()
 		return st
 	}
-	saveSession(cfg.IP, z.cookie)
 
 	m, err := z.GetCmds(statusCmds)
 	if err != nil {
@@ -212,6 +202,8 @@ func buildStatus(st *Status, m map[string]string) {
 	st.WiFi = WiFiInfo{
 		Enabled: g("wifi_onoff_state") == "1",
 		SSID:    firstNonEmpty(g("wifi_chip1_ssid1_ssid"), g("wifi_chip2_ssid1_ssid")),
+		Chip1:   g("wifi_chip1_ssid1_switch_onoff") == "1",
+		Chip2:   g("wifi_chip2_ssid1_switch_onoff") == "1",
 	}
 
 	st.Traffic = TrafficInfo{
@@ -237,7 +229,157 @@ func signalLevel(rsrp int) string {
 	}
 }
 
-// ---------------- 会话缓存 ----------------
+// ---------------- 会话 ----------------
+
+// newSession 返回一个已登录的客户端：优先复用 /tmp 里的会话缓存，失效则重新登录。
+func newSession(cfg Config) (*ZTE, error) {
+	z := NewZTE(cfg.IP, cfg.Password, cfg.Timeout)
+
+	if ck := loadSession(cfg.IP); ck != "" {
+		z.cookie = ck
+		if m, err := z.GetCmds([]string{"network_type"}); err == nil && m["network_type"] != "" {
+			return z, nil
+		}
+	}
+
+	if err := z.Login(); err != nil {
+		return nil, err
+	}
+	saveSession(cfg.IP, z.cookie)
+	return z, nil
+}
+
+// ---------------- 设备 WiFi 开关 ----------------
+//
+// 逆向自设备前端 js/wifi/wifi_main.js + js/service.js：
+//
+//	关闭：goformId=switchWiFiModule, SwitchOption=0
+//	开启：goformId=switchWiFiChip, ChipEnum=<chip1_2|chip1|chip2>, GuestEnable=0
+//
+// ChipEnum 按当前各芯片的 AP 开关状态推导（同 util.js 的 handleWifiChipStatus）。
+var wifiStateCmds = []string{
+	"wifi_onoff_state",
+	"wifi_chip1_ssid1_switch_onoff",
+	"wifi_chip2_ssid1_switch_onoff",
+}
+
+func chipEnumWith(m map[string]string) string {
+	c1 := m["wifi_chip1_ssid1_switch_onoff"] == "1"
+	c2 := m["wifi_chip2_ssid1_switch_onoff"] == "1"
+	switch {
+	case c1 && c2:
+		return "chip1_2"
+	case c1:
+		return "chip1"
+	case c2:
+		return "chip2"
+	default:
+		return "chip1_2"
+	}
+}
+
+// wifiControl 处理 `ztewifi wifi on|off|status`。
+func wifiControl(cfg Config, action string) map[string]interface{} {
+	res := map[string]interface{}{"ok": false, "ip": cfg.IP, "action": action}
+
+	if !cfg.Enabled {
+		res["message"] = "插件已禁用（请到“ZTE 随身WiFi → 设置”中启用）"
+		return res
+	}
+
+	z, err := newSession(cfg)
+	if err != nil {
+		res["message"] = err.Error()
+		return res
+	}
+
+	cur, err := z.GetCmds(wifiStateCmds)
+	if err != nil {
+		res["message"] = err.Error()
+		return res
+	}
+
+	on := cur["wifi_onoff_state"] == "1"
+	res["on"] = on
+
+	if action == "" || action == "status" {
+		res["ok"] = true
+		res["chip"] = chipEnumWith(cur)
+		return res
+	}
+
+	var want bool
+	switch action {
+	case "on", "1", "enable", "open", "start":
+		want = true
+	case "off", "0", "disable", "close", "stop":
+		want = false
+	default:
+		res["message"] = "未知参数 " + action + "（可用: on / off / status）"
+		return res
+	}
+
+	if on == want {
+		res["ok"] = true
+		res["message"] = "设备 WiFi 已是" + onOff(want) + "状态"
+		return res
+	}
+
+	if want {
+		chip := chipEnumWith(cur)
+		res["chip"] = chip
+		resp, err := z.SetCmd(map[string]string{
+			"goformId":    "switchWiFiChip",
+			"ChipEnum":    chip,
+			"GuestEnable": "0",
+		})
+		res["response"] = resp
+		if err != nil {
+			res["message"] = err.Error()
+			return res
+		}
+	} else {
+		resp, err := z.SetCmd(map[string]string{
+			"goformId":     "switchWiFiModule",
+			"SwitchOption": "0",
+		})
+		res["response"] = resp
+		if err != nil {
+			res["message"] = err.Error()
+			return res
+		}
+	}
+
+	// 设备切换需要几秒，轮询等待生效
+	var last string
+	deadline := time.Now().Add(20 * time.Second)
+	for time.Now().Before(deadline) {
+		time.Sleep(1500 * time.Millisecond)
+		m, err := z.GetCmds([]string{"wifi_onoff_state"})
+		if err != nil {
+			last = err.Error()
+			continue
+		}
+		last = m["wifi_onoff_state"]
+		if (last == "1") == want {
+			res["ok"] = true
+			res["on"] = want
+			res["message"] = "设备 WiFi 已" + onOff(want)
+			return res
+		}
+	}
+
+	res["on"] = last == "1"
+	res["message"] = "指令已下发，但设备状态未在超时内变为" + onOff(want) + "（当前 wifi_onoff_state=" + last + "）"
+	return res
+}
+
+func onOff(on bool) string {
+	if on {
+		return "开启"
+	}
+	return "关闭"
+}
 
 type sessionRec struct {
 	IP     string `json:"ip"`
@@ -286,12 +428,15 @@ func atoi64(s string) int64 {
 }
 func atof(s string) float64 { f, _ := strconv.ParseFloat(strings.TrimSpace(s), 64); return f }
 
-// parseOpts 支持 --k v、--k=v、-k v；无值开关自动置 "true"。
-func parseOpts(args []string) map[string]string {
+// parseArgs 解析参数：支持 --k v、--k=v、-k v；无值开关自动置 "true"。
+// 第二个返回值是位置参数（不以 - 开头的），例如 `ztewifi wifi on` 里的 "on"。
+func parseArgs(args []string) (map[string]string, []string) {
 	out := map[string]string{}
+	var pos []string
 	for i := 0; i < len(args); i++ {
 		a := args[i]
 		if !strings.HasPrefix(a, "-") {
+			pos = append(pos, a)
 			continue
 		}
 		a = strings.TrimLeft(a, "-")
@@ -306,7 +451,7 @@ func parseOpts(args []string) map[string]string {
 			out[a] = "true"
 		}
 	}
-	return out
+	return out, pos
 }
 
 func uciSet(key, val string) error {

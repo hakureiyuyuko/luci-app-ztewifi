@@ -18,6 +18,12 @@ func usage() {
   ztewifi test [--ip IP] [--password PWD]
         测试连通性与登录，输出 JSON {ok, message}。
 
+  ztewifi wifi [on|off|status]
+        读取/切换随身 WiFi 自身的无线开关。
+
+  ztewifi raw cmd1,cmd2,...
+        调试用：直接读任意 goform 命令并输出 JSON。
+
   ztewifi config
         输出当前生效的配置（JSON，密码以掩码显示）。
 
@@ -37,7 +43,7 @@ func main() {
 		cmd = argv[0]
 		argv = argv[1:]
 	}
-	opts := parseOpts(argv)
+	opts, pos := parseArgs(argv)
 
 	cfg := LoadConfig()
 	if v := opts["ip"]; v != "" {
@@ -66,6 +72,36 @@ func main() {
 
 	case "test":
 		printJSON(runTest(cfg))
+
+	case "wifi":
+		action := "status"
+		if len(pos) > 0 {
+			action = strings.ToLower(pos[0])
+		}
+		res := wifiControl(cfg, action)
+		printJSON(res)
+		if res["ok"] != true {
+			os.Exit(1)
+		}
+
+	case "raw":
+		// 调试用：直接读任意 goform 命令，例：ztewifi raw wifi_onoff_state,network_type
+		if len(pos) == 0 {
+			fmt.Fprintln(os.Stderr, "用法: ztewifi raw cmd1,cmd2,...")
+			os.Exit(2)
+		}
+		z, err := newSession(cfg)
+		if err != nil {
+			printJSON(map[string]interface{}{ "ok": false, "message": err.Error() })
+			os.Exit(1)
+		}
+		cmds := strings.Split(strings.Join(pos, ","), ",")
+		m, err := z.GetCmds(cmds)
+		if err != nil {
+			printJSON(map[string]interface{}{ "ok": false, "message": err.Error() })
+			os.Exit(1)
+		}
+		printJSON(m)
 
 	case "config":
 		printJSON(map[string]interface{}{

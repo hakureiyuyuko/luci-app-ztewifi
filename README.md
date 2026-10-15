@@ -7,7 +7,8 @@
   信号用 OpenWrt 原生图标（RSRP 换算成质量百分比选图），网络制式/频段/信道各自单独一行。
 - **状态页**：`服务 → ZTE 随身WiFi → 状态`，信息更全（信号 / 网络 / 设备三块），按配置的间隔自动刷新。
 - **设置页**：`服务 → ZTE 随身WiFi → 设置`，配置随身 WiFi 的 **IP** 与 **登录密码**，内置「保存并测试连接」。
-- 后端是一个**零依赖的 Go 二进制**（`/usr/bin/ztewifi`），通过设备自带网页接口取数；纯读取，不修改随身 WiFi 的任何设置。
+  页底部还有一块「**设备控制**」，可以一键开关随身 WiFi 自身的无线热点（会就地刷新状态，不需要“保存并应用”）。
+- 后端是一个**零依赖的 Go 二进制**（`/usr/bin/ztewifi`）：状态类信息纯读取；只有「设备 WiFi 开关」会向设备下发指令。
 
 已在 **ImmortalWrt 25.12 / aarch64 (mediatek/filogic)** 上实测通过。
 
@@ -87,6 +88,7 @@ LuCI 菜单：`服务 → ZTE 随身WiFi`
 |---|---|
 | 状态 | 信号 / 网络 / 设备三块信息，按「状态页刷新间隔」自动刷新，可点「立即刷新」 |
 | 设置 | 启用开关、设备 IP、登录密码、刷新间隔、请求超时、「保存并测试连接」 |
+| 设置 → 设备控制 | 显示并切换随身 WiFi 自身的无线开关（开启 / 关闭） |
 
 首页 `状态 → 概览` 的 `ZTE 随身WiFi` 面板跟随 LuCI 的全局轮询（约 5 秒）刷新。
 
@@ -98,6 +100,9 @@ ztewifi status                # JSON
 ztewifi test                  # 测连通性，输出 {ok, message}
 ztewifi config                # 当前生效配置（密码打码）
 ztewifi set --ip 192.168.0.1 --password xxx --interval 5 --enabled 1
+ztewifi wifi status           # 读取设备 WiFi 开关状态
+ztewifi wifi on | off         # 开启 / 关闭设备 WiFi（会等设备生效后返回）
+ztewifi raw cmd1,cmd2         # 调试：直接读任意 goform 命令，输出 JSON
 ```
 
 ### 配置文件
@@ -128,6 +133,7 @@ config ztewifi 'main'
 | 必需请求头 | `Referer: http://<ip>/` 和 `X-Requested-With: XMLHttpRequest`，**缺任一个返回空** |
 | 登录 | `GET cmd=LD` 取挑战值 → `password = SHA256(SHA256(明文) + LD)`（全大写）→ `goformId=LOGIN`，`result` 为 `0`/`4` 即成功 |
 | 会话 | 登录响应的 `Set-Cookie: zsidn=<64hex>`（**HttpOnly**，`document.cookie` 看不到），后续请求必须回传 |
+| **写操作鉴权** | `ACCESSIBLE_ID_SUPPORT` 为 true 时（本机型如此），**除 `LOGIN` / `SET_WEB_LANGUAGE` 外所有写操作的 body 都要带 `AD`**，否则设备会返回 `{"result":"success"}` 但实际不生效。算法：`AD = SHA256(SHA256(wa_inner_version + cr_version) + RD)`，`RD` 由 `cmd=RD` 读取 |
 | 连接 | 设备是 HTTP/1.0 语义，必须短连接（Go 里 `DisableKeepAlives`），否则第二个请求 ECONNRESET |
 
 关键命令（实测值示例）：
@@ -145,6 +151,24 @@ flux_realtime_{tx,rx}_thrpt   battery_value   wifi_chip1_ssid1_ssid
 
 > 注意：**未登录时几乎所有命令都返回空串**（只有 `imei`、`wa_inner_version` 等少数例外），
 > 所以「读不到数据」基本等于「没登录成功 / 会话被顶掉」。
+
+### 设备 WiFi 开关
+
+逆向自设备前端 `js/wifi/wifi_main.js` + `js/service.js`（都需带 `AD`）：
+
+```
+关闭: goformId=switchWiFiModule & SwitchOption=0
+开启: goformId=switchWiFiChip   & ChipEnum=<chip1_2|chip1|chip2> & GuestEnable=0
+```
+
+`ChipEnum` 按当前各芯片的 AP 开关状态推导（同设备 `util.js` 的 `handleWifiChipStatus`）：
+
+```
+wifi_chip1_ssid1_switch_onoff / wifi_chip2_ssid1_switch_onoff
+  1/1 -> chip1_2     1/0 -> chip1     0/1 -> chip2     其他 -> chip1_2
+```
+
+开关后靠轮询 `wifi_onoff_state` 判断是否生效（设备实际切换需要几秒）。
 
 ---
 
