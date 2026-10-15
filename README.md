@@ -8,7 +8,9 @@
 - **状态页**：`服务 → ZTE 随身WiFi → 状态`，信息更全（信号 / 网络 / 设备三块），按配置的间隔自动刷新。
 - **设置页**：`服务 → ZTE 随身WiFi → 设置`，配置随身 WiFi 的 **IP** 与 **登录密码**，内置「保存并测试连接」。
   页底部还有一块「**设备控制**」，可以一键开关随身 WiFi 自身的无线热点（会就地刷新状态，不需要“保存并应用”）。
-- 后端是一个**零依赖的 Go 二进制**（`/usr/bin/ztewifi`）：状态类信息纯读取；只有「设备 WiFi 开关」会向设备下发指令。
+- 后端是一个**零依赖的 Go 二进制** `ztewifi`（状态类信息纯读取，只有「设备 WiFi 开关」会向设备下发指令）。
+  它已拆成**独立的 ``ztewifi`` 包**（前面挂到 packages feed 的 ``net/ztewifi``），本插件只通过 ``LUCI_DEPENDS:=+ztewifi`` 依赖它，
+  不再自带 Go 源码。
 
 已在 **ImmortalWrt 25.12 / aarch64 (mediatek/filogic)** 上实测通过。
 
@@ -17,12 +19,8 @@
 ## 目录结构
 
 ```
-luci-app-ztewifi/
-├── Makefile                     OpenWrt 包定义（基于 luci.mk）
-├── build.ps1                    Windows 下交叉编译（也可直接 go build）
-├── package.ps1                  生成可分发的 tar.gz（含编译好的 .lmo）
-├── deploy.ps1                   构建 + 一键部署到测试路由器
-├── install.sh                   在路由器本机安装（tar 包内）
+luci-app-ztewifi/                 ← 提交到 immortalwrt/luci 的内容
+├── Makefile                     OpenWrt 包定义（基于 luci.mk，依赖 +ztewifi）
 ├── htdocs/                      LuCI 前端（luci.mk 会装到 /www）
 │   └── luci-static/resources/view/
 │       ├── status/include/29z_ztewifi.js  ← 首页面板（命名见下方说明）
@@ -30,18 +28,27 @@ luci-app-ztewifi/
 ├── po/                          翻译
 │   ├── templates/ztewifi.pot
 │   └── zh_Hans/ztewifi.po       → 安装为 ztewifi.zh-cn.lmo
-├── root/                        安装到路由器的文件树
-│   ├── etc/config/ztewifi
-│   ├── usr/share/luci/menu.d/luci-app-ztewifi.json
-│   └── usr/share/rpcd/acl.d/luci-app-ztewifi.json
-└── src/                         Go 源码（标准库，无第三方依赖）
-    ├── Makefile                 供 luci.mk 调用的构建钩子
-    ├── go.mod
-    ├── main.go                  CLI 入口 / 输出
-    ├── status.go                状态聚合、会话缓存、UCI 读写、WiFi 开关
-    ├── zte.go                   gofrom 接口客户端（登录 / 读命令 / AD 校验位）
-    ├── config.go                UCI 配置解析
-    └── tz.go                    OpenWrt /etc/TZ 解析（否则时间会显示成 UTC）
+└── root/                        安装到路由器的文件树
+    ├── etc/config/ztewifi
+    ├── usr/share/luci/menu.d/luci-app-ztewifi.json
+    └── usr/share/rpcd/acl.d/luci-app-ztewifi.json
+```
+
+Go 后端在另一个仓库 [hakureiyuyuko/ztewifi](https://github.com/hakureiyuyuko/ztewifi)
+（上游 feed 包：`net/ztewifi`），不在本目录内。
+
+本工作区里还有本地调试用的一次性打包脚本（不属于上面两个包）：
+`build.ps1` / `package.ps1` / `deploy.ps1` / `install.sh`，位于工作区根目录。
+
+Go 后端（`ztewifi` 仓库）的文件构成：
+
+```
+ztewifi/
+├── main.go        CLI 入口 / 输出
+├── status.go      状态聚合、会话缓存、UCI 读写、WiFi 开关
+├── zte.go         goform 接口客户端（登录 / 读命令 / AD 校验位）
+├── config.go      UCI 配置解析
+└── tz.go          OpenWrt /etc/TZ 解析（否则时间会显示成 UTC）
 ```
 
 ---
