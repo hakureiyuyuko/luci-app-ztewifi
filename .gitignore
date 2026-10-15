@@ -1,0 +1,23 @@
+# 构建产物
+.build/
+dist/
+*.tar.gz
+*.ipk
+*.apk
+
+# Go
+gocache/
+go.zip
+
+# 本地部署辅助脚本（含凭据相关内容，不入库）
+_askpass.cmd
+rsh.ps1
+rcp.ps1
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+*.swp
+*~
+Thumbs.db
+Desktop.ini
